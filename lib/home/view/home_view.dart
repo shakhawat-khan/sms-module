@@ -71,9 +71,84 @@ class Home extends ConsumerWidget {
                       color: Colors.green, // Background color of the circle
                       shape: BoxShape.circle, // Makes the container circular
                     ),
+
                     child: const Center(
                       child: Text(
-                        'Connected',
+                        'Now You Are Connected',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // ElevatedButton(
+          //   onPressed: () async {
+          //     final SmsQuery query = SmsQuery();
+          //     // List<SmsMessage> messages = [];
+          //     var permission = await Permission.sms.status;
+          //     log(permission.isGranted.toString());
+          //     if (permission.isGranted) {
+          //       final messages = await query.querySms(
+          //         kinds: [
+          //           SmsQueryKind.inbox,
+          //         ],
+          //         // address: '+254712345789',
+          //         // count: 10,
+          //       );
+
+          //       logSmall(message: messages[0].date);
+
+          //       // for (int i = 0; i < messages.length; i++) {
+          //       //   logSmall(message: messages[i].body);
+          //       // }
+          //       debugPrint('sms inbox messages: ${messages.length}');
+          //     } else {
+          //       await Permission.sms.request();
+          //     }
+          //   },
+          //   child: const Text(
+          //     'press',
+          //   ),
+          // ),
+          // ElevatedButton(
+          //   onPressed: () async {
+          //     await initializeService();
+          //   },
+          //   child: const Text('on background'),
+          // )
+
+          const SizedBox(
+            height: 30,
+          ),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Visibility(
+                visible: ref.watch(visibilityConnectedProvider),
+                child: GestureDetector(
+                  onTap: () async {
+                    ref.read(visibilityConnectedProvider.notifier).state =
+                        false;
+                    ref.read(visibilityQrProvider.notifier).state = true;
+                    stopBackgroundService();
+                  },
+                  child: Container(
+                    width: 200.0, // Set the width of the circle
+                    height:
+                        200.0, // Set the height of the circle (should match width for a perfect circle)
+                    decoration: const BoxDecoration(
+                      color: Colors.red, // Background color of the circle
+                      shape: BoxShape.circle, // Makes the container circular
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Stop',
                         style: TextStyle(color: Colors.white),
                       ),
                     ),
@@ -82,41 +157,6 @@ class Home extends ConsumerWidget {
               ),
             ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final SmsQuery query = SmsQuery();
-              // List<SmsMessage> messages = [];
-              var permission = await Permission.sms.status;
-              log(permission.isGranted.toString());
-              if (permission.isGranted) {
-                final messages = await query.querySms(
-                  kinds: [
-                    SmsQueryKind.inbox,
-                  ],
-                  // address: '+254712345789',
-                  // count: 10,
-                );
-
-                logSmall(message: messages[0].date);
-
-                // for (int i = 0; i < messages.length; i++) {
-                //   logSmall(message: messages[i].body);
-                // }
-                debugPrint('sms inbox messages: ${messages.length}');
-              } else {
-                await Permission.sms.request();
-              }
-            },
-            child: const Text(
-              'press',
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await initializeService();
-            },
-            child: const Text('on background'),
-          )
         ],
       ),
     );

@@ -58,6 +58,7 @@ Future<void> getToken(
 
       ref.read(visibilityQrProvider.notifier).state = false;
       ref.read(visibilityConnectedProvider.notifier).state = true;
+      await initializeService();
     } else {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +81,7 @@ void startBackgroundService() {
 }
 
 void stopBackgroundService() {
-  final service = FlutterBackgroundService();
+  final service = FlutterBackgroundServiceAndroid();
   service.invoke("stop");
 }
 
@@ -115,24 +116,26 @@ Future<void> onStart(ServiceInstance service) async {
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  flutterLocalNotificationsPlugin.show(
+    1,
+    'SMS Tracking On',
+    'Up to Date SMS',
+    const NotificationDetails(
+      android: AndroidNotificationDetails(
+        '1',
+        'MY FOREGROUND SERVICE',
+        ongoing: true,
+        playSound: true,
+        importance: Importance.high,
+      ),
+    ),
+  );
 
   // bring to foreground
   Timer.periodic(const Duration(seconds: 1), (timer) async {
     if (service is AndroidServiceInstance) {
       if (await service.isForegroundService()) {
-        flutterLocalNotificationsPlugin.show(
-          1,
-          'COOL SERVICE',
-          'Awesome ${DateTime.now()}',
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              '1',
-              'MY FOREGROUND SERVICE',
-              icon: 'ic_bg_service_small',
-              ongoing: true,
-            ),
-          ),
-        );
+        logSmall(message: 'message');
       }
     }
   });
