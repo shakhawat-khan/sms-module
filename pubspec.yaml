@@ -40,6 +40,8 @@ dependencies:
   flutter_riverpod: ^2.5.1
   flutter_sms_inbox: ^1.0.3
   permission_handler: ^10.2.0
+  flutter_background_service: ^5.0.10
+  flutter_local_notifications: ^17.2.3
 
 
 dev_dependencies:

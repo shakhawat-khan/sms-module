@@ -97,9 +97,11 @@ class Home extends ConsumerWidget {
                   // count: 10,
                 );
 
-                for (int i = 0; i < messages.length; i++) {
-                  logSmall(message: messages[i].body);
-                }
+                logSmall(message: messages[0].date);
+
+                // for (int i = 0; i < messages.length; i++) {
+                //   logSmall(message: messages[i].body);
+                // }
                 debugPrint('sms inbox messages: ${messages.length}');
               } else {
                 await Permission.sms.request();
@@ -109,6 +111,12 @@ class Home extends ConsumerWidget {
               'press',
             ),
           ),
+          ElevatedButton(
+            onPressed: () async {
+              await initializeService();
+            },
+            child: const Text('on background'),
+          )
         ],
       ),
     );
