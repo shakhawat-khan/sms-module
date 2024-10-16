@@ -1,16 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sms_reader/api/api_client.dart';
 import 'package:sms_reader/home/model/get_token_model.dart';
 import 'package:sms_reader/home/provider/home_provider.dart';
+import 'package:sms_reader/main.dart';
 import 'package:sms_reader/utils/app_url.dart';
 import 'package:sms_reader/utils/log_messsage.dart';
 import 'package:http/http.dart' as http;
@@ -58,7 +59,9 @@ Future<void> getToken(
 
       ref.read(visibilityQrProvider.notifier).state = false;
       ref.read(visibilityConnectedProvider.notifier).state = true;
-      await initializeService();
+      // await initializeService();
+      await startService();
+      await prefs!.setString('token', tokenModel.accessToken!);
     } else {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,68 +78,147 @@ Future<void> getToken(
   }
 }
 
-void startBackgroundService() {
-  final service = FlutterBackgroundService();
-  service.startService();
-}
-
-void stopBackgroundService() {
-  final service = FlutterBackgroundServiceAndroid();
-  service.invoke("stop");
-}
-
-Future<void> initializeService() async {
-  final service = FlutterBackgroundService();
-
-  await service.configure(
-    iosConfiguration: IosConfiguration(
-        // autoStart: true,
-        // onForeground: onStart,
-        // onBackground: onIosBackground,
-        ),
-    androidConfiguration: AndroidConfiguration(
-      autoStart: true,
-      onStart: onStart,
-      isForegroundMode: true,
-      autoStartOnBoot: true,
-    ),
-  );
-}
-
+// The callback function should always be a top-level function.
 @pragma('vm:entry-point')
-Future<bool> onIosBackground(ServiceInstance service) async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  return true;
+void startCallback() {
+  // The setTaskHandler function must be called to handle the task in the background.
+  FlutterForegroundTask.setTaskHandler(MyTaskHandler());
 }
 
-@pragma('vm:entry-point')
-Future<void> onStart(ServiceInstance service) async {
-  // Only available for flutter 3.0.0 and later
+class MyTaskHandler extends TaskHandler {
+  static const String incrementCountCommand = 'incrementCount';
 
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  flutterLocalNotificationsPlugin.show(
-    1,
-    'SMS Tracking On',
-    'Up to Date SMS',
-    const NotificationDetails(
-      android: AndroidNotificationDetails(
-        '1',
-        'MY FOREGROUND SERVICE',
-        ongoing: true,
-        playSound: true,
-        importance: Importance.high,
-      ),
-    ),
-  );
+  void callApi() async {
+    prefs = await SharedPreferences.getInstance();
+    // Update notification content.
+    String? token = prefs!.getString('token');
+    logSmall(message: token);
+    log(token!);
+    ApiClientForRest().postData(
+        headers: {'access_token': token},
+        url: '${baseUrl}webhooks',
+        body: {
+          [
+            {
+              "from":
+                  "bKash", // Required: Must be one of the following valid values: '\''bKash'\'', '\''nagad'\'', '\''16216'\'', '\''mCash'\'', '\''sureCash'\'', '\''upay'\'', '\''tap'\''
+              "message":
+                  "You have received payment Tk 14.00 from 01717541865. Ref 12356. Fee Tk 0.00. Balance Tk 14.00. TrxID BIJ1PGUED3 at 19/09/2024 15:02",
+              // Required: The message content, maximum 160 characters long
+              "deviceSim": "1-Airtel"
+              // Optional: If your device has multiple SIMs, specify the SIM name to send SMS from, e.g., '\''1-Airtel'\''. Defaults to SIM 1 if not provided
+            }
+          ]
+        });
 
-  // bring to foreground
-  Timer.periodic(const Duration(seconds: 1), (timer) async {
-    if (service is AndroidServiceInstance) {
-      if (await service.isForegroundService()) {
-        logSmall(message: 'message');
-      }
+    logSmall(message: 'testing');
+    FlutterForegroundTask.updateService(
+      notificationTitle: 'Hello MyTaskHandler :)',
+      notificationText: 'hello world',
+    );
+
+    // Send data to main isolate.
+    FlutterForegroundTask.sendDataToMain('hello world');
+  }
+
+  // Called when the task is started.
+  @override
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    print('onStart(starter: ${starter.name})');
+    callApi();
+  }
+
+  // Called by eventAction in [ForegroundTaskOptions].
+  // - nothing() : Not use onRepeatEvent callback.
+  // - once() : Call onRepeatEvent only once.
+  // - repeat(interval) : Call onRepeatEvent at milliseconds interval.
+  @override
+  void onRepeatEvent(DateTime timestamp) {
+    callApi();
+  }
+
+  // Called when the task is destroyed.
+  @override
+  Future<void> onDestroy(DateTime timestamp) async {
+    print('onDestroy');
+  }
+
+  // Called when data is sent using [FlutterForegroundTask.sendDataToTask].
+  @override
+  void onReceiveData(Object data) {
+    print('onReceiveData: $data');
+    if (data == incrementCountCommand) {
+      callApi();
     }
-  });
+  }
+
+  // Called when the notification button is pressed.
+  @override
+  void onNotificationButtonPressed(String id) {
+    print('onNotificationButtonPressed: $id');
+  }
+
+  // Called when the notification itself is pressed.
+  //
+  // AOS: "android.permission.SYSTEM_ALERT_WINDOW" permission must be granted
+  // for this function to be called.
+  @override
+  void onNotificationPressed() {
+    FlutterForegroundTask.launchApp('/');
+    print('onNotificationPressed');
+  }
+
+  // Called when the notification itself is dismissed.
+  //
+  // AOS: only work Android 14+
+  // iOS: only work iOS 10+
+  @override
+  void onNotificationDismissed() {
+    print('onNotificationDismissed');
+  }
+}
+
+void initService() {
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'foreground_service',
+      channelName: 'Foreground Service Notification',
+      channelDescription:
+          'This notification appears when the foreground service is running.',
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: false,
+      playSound: false,
+    ),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.repeat(5000),
+      autoRunOnBoot: true,
+      autoRunOnMyPackageReplaced: true,
+      allowWakeLock: true,
+      allowWifiLock: true,
+    ),
+  );
+}
+
+Future<ServiceRequestResult> startService() async {
+  if (await FlutterForegroundTask.isRunningService) {
+    return FlutterForegroundTask.restartService();
+  } else {
+    return FlutterForegroundTask.startService(
+      serviceId: 256,
+      notificationTitle: 'Foreground Service is running',
+      notificationText: 'Tap to return to the app',
+      notificationIcon: null,
+      notificationButtons: [
+        const NotificationButton(id: 'btn_hello', text: 'hello'),
+      ],
+      callback: startCallback,
+    );
+  }
+}
+
+Future<ServiceRequestResult> stopService() async {
+  return FlutterForegroundTask.stopService();
 }

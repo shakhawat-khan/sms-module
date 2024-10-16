@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sms_reader/home/provider/home_function.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sms_reader/home/view/home_view.dart';
 
+// Obtain shared preferences.
+SharedPreferences? prefs;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await initializeService();
+  FlutterForegroundTask.initCommunicationPort();
+
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -25,7 +29,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const Home(),
+      home: const HomeView(),
     );
   }
 }
