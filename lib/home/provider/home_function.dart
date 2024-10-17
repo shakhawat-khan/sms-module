@@ -92,26 +92,27 @@ class MyTaskHandler extends TaskHandler {
     prefs = await SharedPreferences.getInstance();
     // Update notification content.
     String? token = prefs!.getString('token');
-    logSmall(message: token);
-    log(token!);
-    ApiClientForRest().postData(
-        headers: {'access_token': token},
-        url: '${baseUrl}webhooks',
-        body: {
-          [
-            {
-              "from":
-                  "bKash", // Required: Must be one of the following valid values: '\''bKash'\'', '\''nagad'\'', '\''16216'\'', '\''mCash'\'', '\''sureCash'\'', '\''upay'\'', '\''tap'\''
-              "message":
-                  "You have received payment Tk 14.00 from 01717541865. Ref 12356. Fee Tk 0.00. Balance Tk 14.00. TrxID BIJ1PGUED3 at 19/09/2024 15:02",
-              // Required: The message content, maximum 160 characters long
-              "deviceSim": "1-Airtel"
-              // Optional: If your device has multiple SIMs, specify the SIM name to send SMS from, e.g., '\''1-Airtel'\''. Defaults to SIM 1 if not provided
-            }
-          ]
-        });
 
-    logSmall(message: 'testing');
+    log(token!);
+
+    final List<Map<String, dynamic>> data = [
+      {
+        "from": "bKash",
+        "message":
+            "You have received payment Tk 14.00 from 01717541865. Ref 12356. Fee Tk 0.00. Balance Tk 14.00. TrxID BIJ1PGUED3 at 19/09/2024 15:02",
+        "deviceSim": "1-Airtel"
+      }
+    ];
+
+    final url = Uri.parse('https://test.yupsis.com/api/v1/webhooks');
+    final response = await http.post(url, body: jsonEncode(data), headers: {
+      "Content-Type": "application/json", // Ensure you're sending JSON
+      'access_token': token
+    });
+
+    log(response.body);
+
+    // logSmall(message: 'testing');
     FlutterForegroundTask.updateService(
       notificationTitle: 'Hello MyTaskHandler :)',
       notificationText: 'hello world',
