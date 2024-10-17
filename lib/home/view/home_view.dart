@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_foreground_task/ui/with_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sms_reader/home/provider/home_function.dart';
@@ -35,6 +36,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
       ref.read(loadingHomeProvider.notifier).state = false;
       await requestPermissions();
+      await Permission.sms.status;
     });
     super.initState();
   }
