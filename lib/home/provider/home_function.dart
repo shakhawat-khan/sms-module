@@ -8,6 +8,7 @@ import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sms_reader/api/api_client.dart';
 import 'package:sms_reader/home/model/get_token_model.dart';
@@ -95,28 +96,29 @@ class MyTaskHandler extends TaskHandler {
     String? token = prefs!.getString('token');
 
     log(token!);
+    PermissionStatus permission = await Permission.sms.status;
 
     final SmsQuery query = SmsQuery();
     // List<SmsMessage> messages = [];
 
-    // if (permission.isGranted) {
-    //   final messages = await query.querySms(
-    //     kinds: [
-    //       SmsQueryKind.inbox,
-    //     ],
-    //     // address: '+254712345789',
-    //     // count: 10,
-    //   );
+    if (permission.isGranted) {
+      final messages = await query.querySms(
+        kinds: [
+          SmsQueryKind.inbox,
+        ],
+        // address: '+254712345789',
+        // count: 10,
+      );
 
-    //   logSmall(message: messages[0].date);
+      logSmall(message: messages[0].body);
 
-    //   // for (int i = 0; i < messages.length; i++) {
-    //   //   logSmall(message: messages[i].body);
-    //   // }
-    //   debugPrint('sms inbox messages: ${messages.length}');
-    // } else {
-    //   await Permission.sms.request();
-    // }
+      // for (int i = 0; i < messages.length; i++) {
+      //   logSmall(message: messages[i].body);
+      // }
+      debugPrint('sms inbox messages: ${messages.length}');
+    } else {
+      await Permission.sms.request();
+    }
 
     final List<Map<String, dynamic>> data = [
       {

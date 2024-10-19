@@ -36,7 +36,6 @@ class _HomeViewState extends ConsumerState<HomeView> {
 
       ref.read(loadingHomeProvider.notifier).state = false;
       await requestPermissions();
-      await Permission.sms.status;
     });
     super.initState();
   }

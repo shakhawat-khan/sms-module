@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 Future<void> requestPermissions() async {
   // Android 13+, you need to allow notification permission to display foreground service notification.
@@ -44,5 +45,10 @@ Future<void> requestPermissions() async {
       // So you need to explain to the user why set it.
       await FlutterForegroundTask.openAlarmsAndRemindersSettings();
     }
+  }
+  var permission = await Permission.sms.status;
+  if (permission.isGranted) {
+  } else {
+    await Permission.sms.request();
   }
 }
