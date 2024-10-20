@@ -95,6 +95,9 @@ class MyTaskHandler extends TaskHandler {
     // Update notification content.
     String? token = prefs!.getString('token');
 
+    String? lastMessage;
+    String? lastHeader;
+
     log(token!);
     PermissionStatus permission = await Permission.sms.status;
 
@@ -109,8 +112,11 @@ class MyTaskHandler extends TaskHandler {
         // address: '+254712345789',
         // count: 10,
       );
+      lastMessage = messages[0].body;
+      lastHeader = messages[0].address;
 
       logSmall(message: messages[0].body);
+      logSmall(message: lastHeader);
 
       // for (int i = 0; i < messages.length; i++) {
       //   logSmall(message: messages[i].body);
@@ -121,12 +127,7 @@ class MyTaskHandler extends TaskHandler {
     }
 
     final List<Map<String, dynamic>> data = [
-      {
-        "from": "bKash",
-        "message":
-            "You have received payment Tk 14.00 from 01717541865. Ref 12356. Fee Tk 0.00. Balance Tk 14.00. TrxID BIJ1PGUED3 at 19/09/2024 15:02",
-        "deviceSim": "1-Airtel"
-      }
+      {"from": lastHeader, "message": lastMessage}
     ];
 
     final url = Uri.parse('https://test.yupsis.com/api/v1/webhooks');
