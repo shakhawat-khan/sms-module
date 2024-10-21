@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sms_reader/api/api_client.dart';
 import 'package:sms_reader/home/model/get_token_model.dart';
 import 'package:sms_reader/home/provider/home_provider.dart';
 import 'package:sms_reader/main.dart';
@@ -89,59 +88,75 @@ void startCallback() {
 
 class MyTaskHandler extends TaskHandler {
   static const String incrementCountCommand = 'incrementCount';
+  DateTime nowDateTime = DateTime.now();
+  List<Map<String, dynamic>> dataList = [];
 
   void callApi() async {
     prefs = await SharedPreferences.getInstance();
     // Update notification content.
     String? token = prefs!.getString('token');
-
-    String? lastMessage;
-    String? lastHeader;
-
-    log(token!);
     PermissionStatus permission = await Permission.sms.status;
 
     final SmsQuery query = SmsQuery();
-    // List<SmsMessage> messages = [];
 
     if (permission.isGranted) {
-      final messages = await query.querySms(
-        kinds: [
-          SmsQueryKind.inbox,
-        ],
-        // address: '+254712345789',
-        // count: 10,
-      );
-      lastMessage = messages[0].body;
-      lastHeader = messages[0].address;
+      Future<List<SmsMessage>> filterMessagesFromDate(DateTime fromDate) async {
+        final messages = await query.querySms(
+          kinds: [SmsQueryKind.inbox],
+        );
 
-      logSmall(message: messages[0].body);
-      logSmall(message: lastHeader);
+        // Filter messages based on the provided date
+        List<SmsMessage> filteredMessages = messages.where((message) {
+          return message.date!.isAfter(fromDate);
+        }).toList();
 
-      // for (int i = 0; i < messages.length; i++) {
-      //   logSmall(message: messages[i].body);
-      // }
-      debugPrint('sms inbox messages: ${messages.length}');
+        return filteredMessages;
+      }
+
+      void getMessages() async {
+        // Example: filter from yesterday
+        List<SmsMessage> recentMessages =
+            await filterMessagesFromDate(nowDateTime);
+
+        // Print the filtered messages
+        for (var message in recentMessages) {
+          if (nowDateTime.isBefore(message.date!)) {
+            dataList.add({"from": message.address, "message": message.body});
+
+            nowDateTime = message.date!;
+          }
+        }
+        logSmall(message: 'message');
+        if (dataList.isNotEmpty) {
+          try {
+            final url = Uri.parse('https://test.yupsis.com/api/v1/webhooks');
+            final response =
+                await http.post(url, body: jsonEncode(dataList), headers: {
+              "Content-Type": "application/json", // Ensure you're sending JSON
+              'access_token': token ?? ''
+            });
+
+            if (response.statusCode == 200 || response.statusCode == 201) {
+              log(response.body);
+
+              dataList.clear();
+            } else {
+              logSmall(message: 'gg');
+            }
+          } catch (e) {
+            logMessage(title: 'error from sending message', message: e);
+          }
+        }
+      }
+
+      getMessages();
     } else {
       await Permission.sms.request();
     }
 
-    final List<Map<String, dynamic>> data = [
-      {"from": lastHeader, "message": lastMessage}
-    ];
-
-    final url = Uri.parse('https://test.yupsis.com/api/v1/webhooks');
-    final response = await http.post(url, body: jsonEncode(data), headers: {
-      "Content-Type": "application/json", // Ensure you're sending JSON
-      'access_token': token
-    });
-
-    log(response.body);
-
-    // logSmall(message: 'testing');
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Hello MyTaskHandler :)',
-      notificationText: 'hello world',
+      notificationTitle: 'SMS Service',
+      notificationText: 'SMS service is running',
     );
 
     // Send data to main isolate.
